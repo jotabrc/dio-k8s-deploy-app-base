@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-gcp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard-rwo
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - image: jotabr092/database-dio-app-base:1.0
+        args:
+          - "--ignore-db-dir=lost+found"
+        imagePullPolicy: Always
+        name: mysql
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            value: Senha123
+          - name: MYSQL_DATABASE
+            value: meubanco
+        ports:
+          - containerPort: 3306
+            name: mysql
+
+        volumeMounts:
+          - name: pvc-gcp
+            mountPath: /var/lib/mysql
+      volumes:
+      - name: pvc-gcp
+        persistentVolumeClaim:
+          claimName: pvc-gcp
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php
+  labels:
+    app: php
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: php
+  template:
+    metadata:
+      labels:
+        app: php
+    spec:
+      containers:
+      - name: php
+        image: jotabr092/backend-dio-app-base:1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
